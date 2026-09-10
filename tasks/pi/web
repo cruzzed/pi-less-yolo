@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+#MISE description="Run the pi-web UI in the pi-less-yolo-web container (project dir only, localhost:8504)"
+#MISE raw=true
+#MISE dir="{{cwd}}"
+set -euo pipefail
+
+# shellcheck source=tasks/pi/_docker_flags
+source "$(dirname "$0")/_docker_flags"
+
+# Use the web image, not the CLI image. PI_IMAGE is only referenced by the
+# inspect/build check above (harmless: base image exists) and by the run below.
+PI_IMAGE="pi-less-yolo-web:latest"
+"${DOCKER_CMD}" image inspect "${PI_IMAGE}" > /dev/null 2>&1 || mise run pi:web-build
+
+DOCKER_FLAGS+=("--interactive")
+[ -t 0 ] && [ -t 1 ] && DOCKER_FLAGS+=("--tty")
+
+# Host-side publish is localhost-only; exposure is controlled here, not in the app.
+PI_WEB_PORT="${PI_WEB_PORT:-8504}"
+DOCKER_FLAGS+=("--publish" "127.0.0.1:${PI_WEB_PORT}:8504")
+
+# pi-web config and data dirs; pre-create so Docker doesn't root-own them.
+mkdir -p "${HOME}/.config/pi-web" "${HOME}/.local/share/pi-web"
+DOCKER_FLAGS+=(
+  "--volume" "${HOME}/.config/pi-web:/home/piuser/.config/pi-web"
+  "--volume" "${HOME}/.local/share/pi-web:/home/piuser/.local/share/pi-web"
+  "--env" "PI_WEB_HOST=0.0.0.0"
+  "--env" "PI_WEB_PORT=8504"
+  "--env" "PI_WEB_DATA_DIR=/home/piuser/.local/share/pi-web"
+)
+
+echo "pi-web UI: http://127.0.0.1:${PI_WEB_PORT} (Ctrl-C stops the container)" >&2
+
+# sessiond owns agent sessions; the web/API process shares its data directory.
+"${DOCKER_CMD}" run "${DOCKER_FLAGS[@]}" "${PI_IMAGE}" \
+  bash -c 'pi-web-sessiond & exec pi-web-server'

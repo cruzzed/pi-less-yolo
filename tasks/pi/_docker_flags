@@ -44,6 +44,10 @@ DOCKER_FLAGS=(
   "--ipc=none"
   "--volume" "$(pwd):$(pwd)${_PI_WORKDIR_RO:+:ro}"  # :ro set by pi:readonly
   "--volume" "${HOME}/.pi/agent:/pi-agent"
+  # Extensions are code that polices the agent; the agent must not rewrite its
+  # own guardrails. Nested bind mounts: the more specific path wins, making
+  # /pi-agent/extensions read-only while the rest of /pi-agent stays writable.
+  "--volume" "${HOME}/.pi/agent/extensions:/pi-agent/extensions:ro"
   "--workdir" "$(pwd)"
   "--env" "PI_CODING_AGENT_DIR=/pi-agent"
   "--env" "TERM=${TERM:-xterm-256color}"
@@ -77,6 +81,7 @@ PI_ENV_VARS=(
   ZAI_API_KEY
   OPENCODE_API_KEY
   KIMI_API_KEY
+  MOONSHOT_API_KEY
   MINIMAX_API_KEY
   MINIMAX_CN_API_KEY
 )

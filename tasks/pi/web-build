@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Build the pi-less-yolo-web image (pi-web UI layer)"
+set -euo pipefail
+
+docker build -f "${MISE_PROJECT_ROOT}/Dockerfile.web" -t pi-less-yolo-web:latest "${MISE_PROJECT_ROOT}"

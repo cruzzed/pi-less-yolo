@@ -19,6 +19,9 @@ Dockerfile, and a CI smoke test.
 | `tasks/pi/shell` | `mise run pi:shell` — opens bash in the container with identical mounts |
 | `tasks/pi/upgrade` | `mise run pi:upgrade` — bumps the `npm install -g` line in `Dockerfile` and rebuilds |
 | `tasks/pi/health` | `mise run pi:health` — checks mise version, Docker, image, task files, `~/.pi/agent`, and tmux |
+| `Dockerfile.web` | Local addition: layer on `pi-less-yolo:latest` adding pi-web. Installs with `--prefix=/usr/local` because the base `.npmrc` redirects global installs to `/pi-agent/npm-global`, which the runtime host mount shadows |
+| `tasks/pi/web` | Local addition: `mise run pi:web` — runs pi-web daemons (sessiond + web/API) in the container; current dir only, publishes `127.0.0.1:${PI_WEB_PORT:-8504}` |
+| `tasks/pi/web-build` | Local addition: `mise run pi:web-build` — builds `pi-less-yolo-web:latest` from `Dockerfile.web` |
 | `.mise/tasks/ci` | `mise run ci` — lint → build → smoke test (local equivalent of CI) |
 | `.mise/tasks/install` | Writes `~/.config/mise/conf.d/pi-less-yolo.toml` to register tasks globally |
 | `.mise/tasks/uninstall` | Removes the global config file |

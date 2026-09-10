@@ -192,6 +192,7 @@ The following environment variables are forwarded from your host into the contai
 | ZAI | `ZAI_API_KEY` |
 | OpenCode | `OPENCODE_API_KEY` |
 | Kimi | `KIMI_API_KEY` |
+| Moonshot AI (platform) | `MOONSHOT_API_KEY` |
 | MiniMax | `MINIMAX_API_KEY` |
 | MiniMax (China) | `MINIMAX_CN_API_KEY` |
 
