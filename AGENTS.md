@@ -89,6 +89,10 @@ mise run ci      # lint + docker build + smoke test
   | `PI_PIDS_LIMIT` | Set `--pids-limit` |
   | `PI_CONTAINER_RUNTIME` | Override container runtime (e.g. `podman`); skips auto-detection |
   | `PI_EXTRA_MOUNTS` | `;`-separated `source:target[:mode]` volume mounts; mode defaults to `rw`; malformed entries and missing sources both warn to stderr and are skipped, never fail the task |
+  | `PI_INSTANCE_ID` | (local addition) Agent instance name — forwarded into the container (safety-gate write-lock ownership) and applied as `ply.instance` label |
+  | `PI_LABELS` | (local addition) Comma-separated `key=value` pairs added as docker `--label`s (fleet tooling: `docker ps --filter label=...`) |
+  | `PI_CONTAINER_NAME` | (local addition) Set container `--name` instead of a random one |
+  | `PI_WEB_INSTANCE` | (local addition, `pi:web` only) Instance name for concurrent web daemons — derives deterministic port (8504–8599) and per-instance data dir |
 - Use `perl -pi -e` for in-place file edits (cross-platform; avoids `sed -i` / `sed -i ''` incompatibility between Linux and macOS).
 - `mise-release.asc` is mounted as a build secret (`--mount=type=secret`), not a bind mount — rootless Podman + SELinux denies `gpg` read access to bind-mounted context files (issue #99).
 

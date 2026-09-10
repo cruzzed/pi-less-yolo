@@ -101,6 +101,24 @@ fi
 [[ -n "${PI_CPUS:-}" ]]       && DOCKER_FLAGS+=("--cpus" "${PI_CPUS}")
 [[ -n "${PI_PIDS_LIMIT:-}" ]] && DOCKER_FLAGS+=("--pids-limit" "${PI_PIDS_LIMIT}")
 
+# Multi-agent coordination (local addition):
+# PI_INSTANCE_ID names this agent instance — forwarded into the container (the
+# safety-gate write-lock uses it) and applied as a container label.
+# PI_LABELS adds extra docker labels: comma-separated key=value pairs, used by
+# fleet tooling (`docker ps --filter label=ply.project=...`).
+# PI_CONTAINER_NAME sets --name instead of a random one.
+if [[ -n "${PI_INSTANCE_ID:-}" ]]; then
+  DOCKER_FLAGS+=("--env" "PI_INSTANCE_ID=${PI_INSTANCE_ID}" "--label" "ply.instance=${PI_INSTANCE_ID}")
+fi
+if [[ -n "${PI_LABELS:-}" ]]; then
+  IFS=',' read -ra _pi_labels <<< "${PI_LABELS}"
+  for _pi_label in "${_pi_labels[@]}"; do
+    [[ "${_pi_label}" =~ ^[A-Za-z0-9_.-]+=[^,]*$ ]] && DOCKER_FLAGS+=("--label" "${_pi_label}")
+  done
+  unset _pi_labels _pi_label
+fi
+[[ -n "${PI_CONTAINER_NAME:-}" ]] && DOCKER_FLAGS+=("--name" "${PI_CONTAINER_NAME}")
+
 # PI_LOCAL_MODELS=1: share the host network namespace so local model servers
 # (Ollama, LM Studio, vLLM) are reachable at their native localhost URLs.
 # Security: all host ports become reachable. macOS: uses the Docker Desktop VM
