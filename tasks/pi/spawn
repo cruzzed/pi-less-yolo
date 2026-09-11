@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+#MISE description="Spawn a detached pi agent in the current directory (worktree-aware)"
+#MISE raw=true
+#MISE dir="{{cwd}}"
+set -euo pipefail
+
+# Contract: cwd IS the context. Callers (e.g. worktree-bootstrap) cd into the
+# target worktree and run this; no path arguments exist by design.
+# Usage: mise run pi:spawn [instance-id]             — interactive (attach later)
+#        mise run pi:spawn [instance-id] -p "prompt" — headless
+
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "pi:spawn: not inside a git repo" >&2; exit 1
+fi
+GIT_DIR="$(git rev-parse --git-dir)"
+COMMON_DIR="$(git rev-parse --git-common-dir)"
+if [[ "$GIT_DIR" == "$COMMON_DIR" ]]; then
+  echo "pi:spawn: warning: cwd is the main checkout, not a worktree — spawning anyway" >&2
+fi
+
+BRANCH="$(git branch --show-current 2>/dev/null || echo detached)"
+PROJECT="$(basename "$(git rev-parse --show-toplevel)")"
+
+INSTANCE=""
+[[ "${1:-}" != -* && -n "${1:-}" ]] && { INSTANCE="$1"; shift; }
+[[ -n "$INSTANCE" ]] || INSTANCE="${BRANCH##*/}-$(head -c2 /dev/urandom | od -An -tx1 | tr -d ' ')"
+PROMPT=""
+[[ "${1:-}" == "-p" ]] && PROMPT="${2:?-p needs a prompt}"
+
+SAFE_BRANCH="$(echo "$BRANCH" | tr '/' '-')"
+export PI_INSTANCE_ID="$INSTANCE"
+export PI_CONTAINER_NAME="ply-${PROJECT}-${SAFE_BRANCH}-${INSTANCE}"
+# PI_LABELS left unset: _docker_flags applies default ply.project/ply.worktree labels.
+
+if [[ ! -f "${HOME}/.config/pi-agent/env" ]]; then
+  echo "pi:spawn: missing ~/.config/pi-agent/env (provider key)" >&2; exit 1
+fi
+# shellcheck source=/dev/null
+source "${HOME}/.config/pi-agent/env"
+
+# shellcheck source=tasks/pi/_docker_flags
+source "$(dirname "$0")/_docker_flags"
+
+DOCKER_FLAGS+=("--detach")
+
+if [[ -n "$PROMPT" ]]; then
+  # Headless: no tty, and stdin must be closed — pi -p blocks on stdin EOF.
+  # Drop --rm so logs survive completion (inspect with docker logs; prune later).
+  _kept=()
+  for f in "${DOCKER_FLAGS[@]}"; do [[ "$f" != "--rm" ]] && _kept+=("$f"); done
+  DOCKER_FLAGS=("${_kept[@]}")
+  unset _kept f
+  "${DOCKER_CMD}" run "${DOCKER_FLAGS[@]}" "${PI_IMAGE}" -p "$PROMPT" </dev/null >/dev/null
+  echo "spawned headless ${PI_CONTAINER_NAME}"
+  echo "  logs: docker logs -f ${PI_CONTAINER_NAME}  (persists after exit; prune: docker container prune)"
+else
+  DOCKER_FLAGS+=("--interactive" "--tty")
+  "${DOCKER_CMD}" run "${DOCKER_FLAGS[@]}" "${PI_IMAGE}" >/dev/null
+  echo "spawned interactive ${PI_CONTAINER_NAME}"
+  echo "  attach: docker attach ${PI_CONTAINER_NAME}  (detach: Ctrl-P Ctrl-Q)"
+fi
+echo "  instance: ${INSTANCE}  branch: ${BRANCH}"

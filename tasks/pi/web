@@ -11,7 +11,10 @@ PI_WEB_INSTANCE="${PI_WEB_INSTANCE:-main}"
 PROJECT="$(basename "$(pwd)")"
 HASH="$(printf '%s' "$(pwd):${PI_WEB_INSTANCE}" | cksum | cut -d' ' -f1)"
 export PI_INSTANCE_ID="web-${PI_WEB_INSTANCE}"
-WORKTREE_NAME="$(basename "$(pwd)")"
+# ply.worktree is the branch name (consistent with _docker_flags default labels);
+# fall back to the dir name outside git repos / detached HEAD.
+WORKTREE_NAME="$(git branch --show-current 2>/dev/null || true)"
+WORKTREE_NAME="${WORKTREE_NAME:-$(basename "$(pwd)")}"
 PI_LABELS="ply.project=${PROJECT},ply.worktree=${WORKTREE_NAME},ply.instance=${PI_WEB_INSTANCE}"
 export PI_LABELS
 export PI_CONTAINER_NAME="ply-web-${PROJECT}-${PI_WEB_INSTANCE}"

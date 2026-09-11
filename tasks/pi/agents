@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+#MISE description="List pi agents, write-lock, and vicinity state for the current directory"
+#MISE dir="{{cwd}}"
+set -euo pipefail
+
+# Read-only view of the coordination state. The worktree is the database:
+# containers are found by docker labels, lock/vicinity are plain files in cwd.
+
+BRANCH=""
+PROJECT=""
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  BRANCH="$(git branch --show-current 2>/dev/null || true)"
+  PROJECT="$(basename "$(git rev-parse --show-toplevel)")"
+fi
+
+echo "== containers =="
+filters=()
+[[ -n "$PROJECT" ]] && filters+=(--filter "label=ply.project=$PROJECT")
+[[ -n "$BRANCH" ]]  && filters+=(--filter "label=ply.worktree=$BRANCH")
+if [[ ${#filters[@]} -gt 0 ]]; then
+  docker ps "${filters[@]}" --format "  {{.Names}}  ({{.Status}})" || true
+else
+  echo "  (not a git repo — no labels to filter by)"
+fi
+
+echo "== write-lock =="
+if [[ -f .pi-writelock/owner ]]; then
+  owner="$(cat .pi-writelock/owner)"
+  mtime="$(stat -c %Y .pi-writelock)"
+  age=$(( $(date +%s) - mtime ))
+  if [[ $age -lt 1800 ]]; then
+    echo "  held by: $owner (${age}s ago, fresh)"
+  else
+    echo "  held by: $owner (${age}s ago, STALE — will be reaped on next write)"
+  fi
+else
+  echo "  free"
+fi
+
+echo "== vicinity (agents seen in cwd) =="
+if [[ -d .pi-agents ]]; then
+  now=$(date +%s)
+  found=0
+  for f in .pi-agents/*; do
+    [[ -e "$f" ]] || continue
+    found=1
+    age=$(( now - $(stat -c %Y "$f") ))
+    if [[ $age -lt 120 ]]; then
+      echo "  $(basename "$f") — active (${age}s ago)"
+    else
+      echo "  $(basename "$f") — stale ($(( age / 60 ))min ago)"
+    fi
+  done
+  [[ $found -eq 0 ]] && echo "  none"
+  true
+else
+  echo "  none"
+fi

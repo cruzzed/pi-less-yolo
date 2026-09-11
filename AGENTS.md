@@ -22,6 +22,8 @@ Dockerfile, and a CI smoke test.
 | `Dockerfile.web` | Local addition: layer on `pi-less-yolo:latest` adding pi-web. Installs with `--prefix=/usr/local` because the base `.npmrc` redirects global installs to `/pi-agent/npm-global`, which the runtime host mount shadows |
 | `tasks/pi/web` | Local addition: `mise run pi:web` — runs pi-web daemons (sessiond + web/API) in the container; current dir only, publishes `127.0.0.1:${PI_WEB_PORT:-8504}` |
 | `tasks/pi/web-build` | Local addition: `mise run pi:web-build` — builds `pi-less-yolo-web:latest` from `Dockerfile.web` |
+| `tasks/pi/spawn` | Local addition: `mise run pi:spawn [id] [-p prompt]` — detached agent in cwd (worktree-aware); headless drops `--rm` and closes stdin |
+| `tasks/pi/agents` | Local addition: `mise run pi:agents` — read-only fleet view: labeled containers + `.pi-writelock` + `.pi-agents` state from cwd |
 | `.mise/tasks/ci` | `mise run ci` — lint → build → smoke test (local equivalent of CI) |
 | `.mise/tasks/install` | Writes `~/.config/mise/conf.d/pi-less-yolo.toml` to register tasks globally |
 | `.mise/tasks/uninstall` | Removes the global config file |
