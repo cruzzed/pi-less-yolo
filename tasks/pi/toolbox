@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+#MISE description="Manage the global agent toolbox (~/.pi/toolbox, mounted ro at /toolbox)"
+#MISE dir="{{cwd}}"
+set -euo pipefail
+
+# The toolbox is the "box of tools" layer: extra binaries/scripts exposed to
+# every agent container read-only. The container image is musl-based, so only
+# statically-linked binaries or scripts work — checked here at add time.
+#
+# Usage:
+#   mise run pi:toolbox add <path>     register a tool (copies it in)
+#   mise run pi:toolbox list           show the box
+#   mise run pi:toolbox remove <name>  take a tool out
+
+BOX="${HOME}/.pi/toolbox"
+CMD="${1:-list}"
+
+case "$CMD" in
+  add)
+    SRC="${2:?add needs a path}"
+    [[ -f "$SRC" && -x "$SRC" ]] || { echo "pi:toolbox: not an executable file: $SRC" >&2; exit 1; }
+    if head -c 4 "$SRC" | grep -q $'\x7fELF'; then
+      if ldd "$SRC" 2>&1 | grep -q "not a dynamic executable"; then
+        : # static — good
+      else
+        echo "pi:toolbox: '$SRC' is dynamically linked (glibc) — will NOT run in the musl container." >&2
+        echo "  Provide a static build (or a script), or install the tool inside the image instead." >&2
+        exit 1
+      fi
+    fi
+    mkdir -p "$BOX"
+    cp -a "$SRC" "$BOX/$(basename "$SRC")"
+    echo "added: $BOX/$(basename "$SRC")"
+    ;;
+  list)
+    if [[ -d "$BOX" ]]; then ls -la "$BOX"; else echo "(empty — no toolbox yet)"; fi
+    ;;
+  remove)
+    NAME="${2:?remove needs a name}"
+    rm -v "$BOX/$NAME"
+    ;;
+  *)
+    echo "usage: mise run pi:toolbox [add <path>|list|remove <name>]" >&2; exit 2
+    ;;
+esac

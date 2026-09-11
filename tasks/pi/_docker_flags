@@ -54,6 +54,17 @@ DOCKER_FLAGS=(
   "--env" "COLORTERM=${COLORTERM:-truecolor}"
 )
 
+# Global toolbox (local addition): ~/.pi/toolbox is a user-curated set of
+# extra tools exposed to every agent container, read-only, at /toolbox.
+# Manage with `mise run pi:toolbox`. NOTE: the image is musl-based — only
+# statically-linked binaries (or scripts) work; the task checks this on add.
+if [[ -d "${HOME}/.pi/toolbox" ]]; then
+  DOCKER_FLAGS+=(
+    "--volume" "${HOME}/.pi/toolbox:/toolbox:ro"
+    "--env" "PATH=/toolbox:/pi-agent/npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  )
+fi
+
 # Podman-specific: use --userns=keep-id to properly map the user namespace
 # and avoid "crun: chown `/dev/pts/0`: Invalid argument" errors.
 if [[ "${DOCKER_CMD}" == "podman" ]]; then
