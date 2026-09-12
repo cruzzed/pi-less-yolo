@@ -17,6 +17,33 @@ Pi defaults to running with full access to your filesystem. This repo constrains
 
 > **This is "less YOLO", not "no YOLO".** Container escapes exist. The mounted directories are fully writable. This is a meaningful reduction in risk, not a security guarantee.
 
+## This fork (cruzzed/pi-less-yolo)
+
+The default branch here is **`local`**: upstream
+[cjermain/pi-less-yolo](https://github.com/cjermain/pi-less-yolo) `main` plus a
+small set of commits used by the [harnessed-pi](https://github.com/cruzzed/harnessed-pi)
+stack (a behavioral safety gate, fleet tooling, and a web UI layer on top of
+this jail). Everything below this section is upstream's documentation.
+
+What `local` adds:
+
+- **`MOONSHOT_API_KEY` forwarding** (alongside the existing `KIMI_API_KEY`)
+  and `~/.pi/agent/extensions` mounted **read-only** — extensions police the
+  agent, so the agent must not be able to rewrite them.
+- **Multi-agent coordination passthroughs** — `PI_INSTANCE_ID`, `PI_LABELS`,
+  `PI_CONTAINER_NAME` (see the host-side variables table in
+  [AGENTS.md](AGENTS.md)); consumed by the harnessed-pi safety gate's
+  write-lock and vicinity heartbeat.
+- **Fleet tasks** — `mise run pi:spawn [id] [-p prompt]` launches a detached,
+  worktree-aware agent in the current directory; `mise run pi:agents` gives a
+  read-only fleet view (labeled containers + write-lock/heartbeat state).
+- **Toolbox layer** — `~/.pi/toolbox` mounted read-only at `/toolbox` in every
+  container, managed via `mise run pi:toolbox` (static-linked tools only).
+
+The pi-web UI layers live in the harnessed-pi repo (`pi-web/`), not here.
+Bug reports and PRs for pi-less-yolo itself belong
+[upstream](https://github.com/cjermain/pi-less-yolo).
+
 ## Why use this?
 
 AI coding agents are powerful — and dangerous. A hallucinating model, a misunderstood instruction, or a runaway loop can delete, overwrite, or exfiltrate files anywhere on your machine. `pi-less-yolo` gives you a practical safety net:
