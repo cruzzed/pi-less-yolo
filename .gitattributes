@@ -1,0 +1,4 @@
+# core.autocrlf=true checkouts CRLF and breaks sourced task files and bash shebangs.
+tasks/** text eol=lf
+.mise/** text eol=lf
+*.sh text eol=lf

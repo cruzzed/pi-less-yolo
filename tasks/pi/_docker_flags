@@ -54,6 +54,20 @@ DOCKER_FLAGS=(
   "--env" "COLORTERM=${COLORTERM:-truecolor}"
 )
 
+# User flags file (harnessed-pi ADR 0007): per-user plain-shell file sourced if
+# present, AFTER the defaults above and BEFORE the derived blocks below — it
+# may set any PI_* variable (PI_EXTRA_MOUNTS, PI_MEMORY, PI_LABELS, ...) and/or
+# append to DOCKER_FLAGS directly. Never repo-tracked; nothing writes it
+# automatically. Blast radius: mounts/flags added here enlarge what the
+# container can touch, which the jail otherwise bounds by construction — keep
+# this file small and reviewed.
+PI_FLAGS_FILE="${XDG_CONFIG_HOME:-${HOME}/.config}/pi-less-yolo/flags.sh"
+if [[ -f "${PI_FLAGS_FILE}" ]]; then
+  # shellcheck source=/dev/null
+  source "${PI_FLAGS_FILE}"
+fi
+unset PI_FLAGS_FILE
+
 # Global toolbox (local addition): ~/.pi/toolbox is a user-curated set of
 # extra tools exposed to every agent container, read-only, at /toolbox.
 # Manage with `mise run pi:toolbox`. NOTE: the image is musl-based — only
